@@ -14,6 +14,7 @@ COPY requirements.txt .
 # Force removal of full OpenCV if Ultralytics tries to pull it
 RUN pip uninstall -y opencv-python opencv-contrib-python || true
 
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
