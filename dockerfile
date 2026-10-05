@@ -10,6 +10,10 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY requirements.txt .
+
+# Force removal of full OpenCV if Ultralytics tries to pull it
+RUN pip uninstall -y opencv-python opencv-contrib-python || true
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
