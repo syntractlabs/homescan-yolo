@@ -1,10 +1,15 @@
 FROM python:3.10-slim
 
-# Install system dependencies required by OpenCV headless
+# Install ALL system dependencies required by OpenCV headless
 RUN apt-get update && apt-get install -y \
     libgl1 \
     libglib2.0-0 \
     libxcb1 \
+    libx11-6 \
+    libxext6 \
+    libsm6 \
+    libxrender1 \
+    libice6 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
