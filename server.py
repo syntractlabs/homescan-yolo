@@ -64,9 +64,10 @@ async def detect(image: UploadFile = File(...)):
 
 @app.get("/")
 def health():
-    return {"status": "yolo server running"}
+    return {"status": "yolo server running", "backend_version": "temp-extension-fix-v2"}
 
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "5001"))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
