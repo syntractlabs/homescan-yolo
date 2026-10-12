@@ -1,43 +1,72 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 from ultralytics import YOLO
-import uvicorn
-import tempfile
 import os
+import tempfile
+import uvicorn
 
 app = FastAPI()
 model = YOLO("yolov8n.pt")
 
+
 @app.post("/detect")
 async def detect(image: UploadFile = File(...)):
+    tmp_path = None
+
     try:
-        # Save temp file
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
-            tmp.write(await image.read())
+        image_bytes = await image.read()
+
+        if not image_bytes:
+            return JSONResponse(
+                {"error": "The uploaded image was empty."},
+                status_code=400,
+            )
+
+        original_name = image.filename or "damage.jpg"
+        extension = os.path.splitext(original_name)[1].lower()
+
+        if extension not in {".jpg", ".jpeg", ".png", ".webp", ".bmp"}:
+            extension = ".jpg"
+
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=extension,
+        ) as tmp:
+            tmp.write(image_bytes)
+            tmp.flush()
             tmp_path = tmp.name
 
-        # Run YOLO
-        results = model(tmp_path)
+        results = model.predict(source=tmp_path)
 
         detections = []
-        for r in results:
-            for box in r.boxes:
-                detections.append({
-                    "class": int(box.cls),
-                    "confidence": float(box.conf),
-                    "bbox": box.xyxy.tolist()
-                })
-
-        os.remove(tmp_path)
+        for result in results:
+            for box in result.boxes:
+                detections.append(
+                    {
+                        "class": int(box.cls.item()),
+                        "confidence": float(box.conf.item()),
+                        "bbox": box.xyxy[0].tolist(),
+                    }
+                )
 
         return JSONResponse({"detections": detections})
 
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+    except Exception as error:
+        return JSONResponse(
+            {"error": str(error)},
+            status_code=500,
+        )
+
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
 
 @app.get("/")
 def health():
     return {"status": "yolo server running"}
 
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=5001)
+    port = int(os.getenv("PORT", "5001"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
